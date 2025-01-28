@@ -1,0 +1,6 @@
+Flask
+mysql-connector-python
+faiss-cpu
+sentence-transformers
+transformers
+numpy
