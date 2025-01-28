@@ -1,5 +1,5 @@
 
-# RAG Chatbot with OpenAI
+# RAG (Retrieval-Augmented Generation) Chatbot
 
 This project implements a **Retrieval-Augmented Generation (RAG)** chatbot powered by OpenAI's GPT-3 model. The bot fetches relevant documents from a local corpus (stored in a MySQL database) and uses OpenAI for generating answers based on both the query and relevant context.
 
