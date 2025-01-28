@@ -1,206 +1,165 @@
 
-# RAG (Retrieval-Augmented Generation) Chatbot
+# RAG Chatbot System
 
-This project implements a **Retrieval-Augmented Generation (RAG)** chatbot powered by OpenAI's GPT-3 model. The bot fetches relevant documents from a local corpus (stored in a MySQL database) and uses OpenAI for generating answers based on both the query and relevant context.
+This repository contains a RAG (Retrieve & Generate) chatbot system that integrates MySQL, FAISS for vector storage, and SentenceTransformers for text embeddings. It allows you to interact with the chatbot via REST API endpoints, store and retrieve conversation history in MySQL.
 
-## How to Install and Run the System Locally on macOS
+## 1. Install and Run the System Locally
 
-1. **Clone the Repository**:
+### Install Dependencies
 
-   Clone the project repository to your local machine:
-
-   ```bash
-   git clone <repo_url>
-   cd <repo_directory>
-   ```
-
-2. **Set Up a Python Virtual Environment**:
-
-   It is recommended to use a virtual environment to manage dependencies. For macOS, you can use `venv` or `conda`.
-
-   If using **conda**:
+1. Clone the repository:
 
    ```bash
-   conda create --name rag_env python=3.9
-   conda activate rag_env
+   git clone https://github.com/yourusername/rag-chatbot.git
+   cd rag-chatbot
    ```
 
-   OR if using **venv**:
+2. Create and activate a virtual environment (optional but recommended):
 
    ```bash
-   python3 -m venv rag_env
-   source rag_env/bin/activate
+   conda create -n rag python=3.10
+   conda activate rag
    ```
 
-3. **Install Required Dependencies**:
-
-   Install all the required dependencies listed in the `requirements.txt` file:
+3. Install the required Python dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Install MySQL on macOS**:
+### Run the Application
 
-   If you don’t have MySQL installed, you can install it using **Homebrew**:
+Start the Flask app locally:
 
-   ```bash
-   brew install mysql
-   ```
+```bash
+python rag_chatbot.py
+```
 
-   After installation, start MySQL with:
+The application will be running at `http://127.0.0.1:5000`.
 
-   ```bash
-   brew services start mysql
-   ```
+## 2. Set Up MySQL and Create the Required Tables
 
-   Then, log into MySQL to create a database:
+### Install MySQL
+
+If you don’t already have MySQL installed, follow the steps for your operating system:
+
+- **macOS**: Install using Homebrew:
+  ```bash
+  brew install mysql
+  ```
+  
+- **Ubuntu**:
+  ```bash
+  sudo apt install mysql-server
+  ```
+
+### Create the Database and User
+
+1. Log into MySQL:
 
    ```bash
    mysql -u root -p
-   CREATE DATABASE chatbot_db;
    ```
 
-5. **Create Required Tables**:
-
-   Create a table for storing chat history:
+2. Create the database and user:
 
    ```sql
-   CREATE TABLE IF NOT EXISTS chat_history (
+   CREATE DATABASE rag_chatbot;
+   CREATE USER 'rag_user'@'localhost' IDENTIFIED BY 'password';
+   GRANT ALL PRIVILEGES ON rag_chatbot.* TO 'rag_user'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+
+3. Create the required `history` table:
+
+   ```sql
+   USE rag_chatbot;
+
+   CREATE TABLE history (
        id INT AUTO_INCREMENT PRIMARY KEY,
-       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-       role ENUM('user', 'system'),
-       content TEXT
+       user_message TEXT,
+       bot_response TEXT,
+       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
    );
    ```
 
-6. **Set Environment Variables for macOS**:
+## 3. Environment Variables
 
-   For security, store the OpenAI API key and database credentials as environment variables. On macOS, you can add them to your shell configuration (e.g., `.zshrc` or `.bash_profile`):
+Create a `.env` file in the project directory with the following contents:
 
-   Open `.zshrc` or `.bash_profile` using a text editor (e.g., `nano` or `vim`):
-
-   ```bash
-   nano ~/.zshrc  # For Zsh users
-   ```
-
-   Or for Bash users:
-
-   ```bash
-   nano ~/.bash_profile
-   ```
-
-   Add the following lines (replace the placeholder values with your actual API key and database credentials):
-
-   ```bash
-   export OPENAI_API_KEY="your-openai-api-key-here"
-   export DB_HOST="localhost"
-   export DB_USER="your-db-username"
-   export DB_PASSWORD="your-db-password"
-   export DB_NAME="chatbot_db"
-   ```
-
-   After saving the file, reload the configuration:
-
-   ```bash
-   source ~/.zshrc  # For Zsh users
-   ```
-
-   Or for Bash users:
-
-   ```bash
-   source ~/.bash_profile
-   ```
-
-7. **Run the Flask Application**:
-
-   Once everything is set up, you can start the Flask application:
-
-   ```bash
-   python rag_chatbot.py
-   ```
-
-   The application will be running on `http://127.0.0.1:5000/`.
-
-## How to Test the `/chat` and `/history` Endpoints
-
-### Testing `/chat` Endpoint
-
-1. **Using HTTPie**:
-
-   Install HTTPie if you don't have it:
-
-   ```bash
-   brew install httpie
-   ```
-
-   Send a POST request to the `/chat` endpoint:
-
-   ```bash
-   http POST http://127.0.0.1:5000/chat query="What is artificial intelligence?"
-   ```
-
-   The response will be a dynamic answer generated by OpenAI based on your query and the relevant corpus documents.
-
-2. **Using Postman**:
-
-   - Set the request type to `POST`.
-   - Set the URL to `http://127.0.0.1:5000/chat`.
-   - In the body of the request, select `raw` and set the format to `JSON`. Then, use the following data:
-
-     ```json
-     {
-       "query": "What is artificial intelligence?"
-     }
-     ```
-
-   You should get a dynamic response.
-
-### Testing `/history` Endpoint
-
-To view the stored chat history from the MySQL database:
-
-```bash
-http GET http://127.0.0.1:5000/history
+```env
+DB_HOST=localhost
+DB_USER=rag_user
+DB_PASSWORD=password
+DB_NAME=rag_chatbot
 ```
 
-This will return all conversations stored in the `chat_history` table.
+This file will provide the database credentials needed for the system to connect to MySQL.
 
-## Troubleshooting Common Issues
+## 4. Python Files
 
-1. **No API Key Provided**:
-   - Ensure the OpenAI API key is set correctly as an environment variable. Check if the key is correctly added in `.zshrc` or `.bash_profile`.
+### `data_preprocessing.py`
 
-   Example:
+This script is responsible for processing and preparing the input data (e.g., cleaning text or creating embeddings). It uses libraries like `sentence_transformers` to generate embeddings for text.
 
-   ```bash
-   export OPENAI_API_KEY="your-openai-api-key-here"
-   ```
 
-2. **MySQL Connection Errors**:
-   - Ensure MySQL is running (`brew services start mysql`) and that the credentials in the environment variables are correct.
+### `embed_store.py`
 
-   To test MySQL connection:
+This script handles storing the generated embeddings into a FAISS index, which is used to perform fast similarity searches.
 
-   ```bash
-   mysql -u your-db-username -p
-   ```
 
-3. **Quota Exceeded (OpenAI)**:
-   - If you exceed your OpenAI API quota, you will need to either wait for your quota to reset or upgrade your OpenAI plan.
+### `rag_chatbot.py`
 
-   Check your usage in your OpenAI account dashboard: [OpenAI API Keys](https://platform.openai.com/account/api-keys).
+This file is the main Flask application. It defines the routes and handles the interactions between the user and the chatbot. It retrieves the user message, processes it, and generates a response.
 
-## Required Environment Variables
 
-Make sure the following environment variables are set:
+### `requirements.txt`
 
-- **OPENAI_API_KEY**: Your OpenAI API key (generated at [OpenAI Platform](https://platform.openai.com/)).
-- **DB_HOST**: The host of your MySQL server (usually `localhost`).
-- **DB_USER**: Your MySQL username (e.g., `root`).
-- **DB_PASSWORD**: Your MySQL password.
-- **DB_NAME**: The name of the database (e.g., `chatbot_db`).
+This file contains the list of required Python dependencies. Ensure all necessary libraries are added here.
 
-## Conclusion
+```
+Flask==2.1.1
+mysql-connector-python==8.0.27
+faiss-cpu==1.7.1
+sentence-transformers==2.2.0
+huggingface-hub==0.9.0
+sklearn==0.0
+python-dotenv==0.19.2
+```
 
-You have successfully set up and run the RAG chatbot locally on your macOS. If you run into any issues, check the logs for error messages, and feel free to reach out if further help is needed.
+## 5. Test the Endpoints
+
+### Test the `/chat` Endpoint
+
+- **Method**: `POST`
+- **Request Body**:
+  ```json
+  {
+    "message": "Hello, chatbot!"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "response": "I'm here to help! You asked: Hello, chatbot!"
+  }
+  ```
+
+This endpoint generates a response to the user message and stores both the user input and the bot response in the MySQL database.
+
+### Test the `/history` Endpoint
+
+- **Method**: `GET`
+- **Example Response**:
+  ```json
+  [
+    {
+      "id": 1,
+      "user_message": "Hello, chatbot!",
+      "bot_response": "I'm here to help! You asked: Hello, chatbot!",
+      "timestamp": "2025-01-29 12:00:00"
+    }
+  ]
+  ```
+
+This endpoint retrieves all stored conversations from the MySQL database.
